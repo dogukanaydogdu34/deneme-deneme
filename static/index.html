@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slayt Metin Düzenleyici</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --panel:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e4e2dc;
+    --accent:#e07a2f; --accent-soft:#fdf0e6; --sel:#7b5cd6; --sel-soft:rgba(123,92,214,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  button,select,input,textarea{font:inherit;color:inherit}
+  .top{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .top h1{font-size:15px;font-weight:650;margin:0 12px 0 0;white-space:nowrap}
+  .top .sp{flex:1}
+  .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+  .btn:hover{border-color:#cfccc4}
+  .btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn.accent{background:var(--accent-soft);border-color:#f3cfb1;color:#9a4a12}
+  .btn.on{background:var(--sel-soft);border-color:var(--sel);color:var(--sel)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .main{display:grid;grid-template-columns:120px 1fr 340px;height:calc(100% - 56px)}
+  .thumbs{border-right:1px solid var(--line);overflow:auto;padding:10px;background:var(--panel)}
+  .thumb{display:block;width:100%;margin-bottom:10px;border:2px solid transparent;border-radius:6px;cursor:pointer;background:#eee}
+  .thumb.active{border-color:var(--sel)}
+  .thumbs .n{font-size:11px;color:var(--muted);margin:-6px 0 10px 2px}
+  .stagewrap{position:relative;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px}
+  .stage{position:relative;box-shadow:0 2px 18px rgba(0,0,0,.10);background:#fff;line-height:0}
+  .stage img{display:block;max-width:100%;user-select:none;-webkit-user-drag:none}
+  .stage.adding{cursor:crosshair}
+  .box{position:absolute;border:1px dashed transparent;border-radius:3px;cursor:pointer}
+  .stage:not(.hideboxes) .box:hover{border-color:rgba(123,92,214,.7);background:rgba(123,92,214,.06)}
+  .box.edited{border-color:rgba(224,122,47,.55)}
+  .box.sel{border:1.5px solid var(--sel)!important;background:var(--sel-soft)!important}
+  .stage.hideboxes .box{display:none}
+  .busy{position:absolute;top:10px;right:10px;background:var(--ink);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;line-height:1.4;display:none}
+  .drop{border:2px dashed #cfccc4;border-radius:14px;padding:56px 40px;text-align:center;background:var(--panel);max-width:520px;cursor:pointer}
+  .drop.over{border-color:var(--accent);background:var(--accent-soft)}
+  .drop h2{margin:0 0 6px;font-size:18px}
+  .drop p{margin:0;color:var(--muted)}
+  .side{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:16px}
+  .side h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 8px}
+  .side h3:first-child{margin-top:0}
+  textarea{width:100%;min-height:72px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+  .row{display:flex;gap:8px;margin-top:8px;align-items:center}
+  .row>*{flex:1}
+  .row label{flex:0 0 64px;color:var(--muted);font-size:12px}
+  select,input[type=number]{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff}
+  input[type=color]{width:100%;height:32px;border:1px solid var(--line);border-radius:8px;padding:2px;background:#fff}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{flex:1;border:0;background:#fff;padding:6px 0;cursor:pointer}
+  .seg button.on{background:var(--sel-soft);color:var(--sel);font-weight:600}
+  .nudge{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .empty{color:var(--muted);font-size:13px;padding:8px 0}
+  .list .it{padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+  .list .it:hover{border-color:#cfccc4}
+  .list .it.sel{border-color:var(--sel);background:var(--sel-soft)}
+  .list .it .dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:0 0 8px;background:#d8d6cf}
+  .list .it.edited .dot{background:var(--accent)}
+  .list .it .t{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .presets button{border:1px solid var(--line);border-radius:8px;padding:0;background:#fff;cursor:pointer;overflow:hidden;line-height:0}
+  .presets button:hover{border-color:var(--sel)}
+  .presets img{width:100%;display:block}
+  .presets span{display:block;line-height:1.3;font-size:11px;padding:3px 0 4px;color:var(--muted)}
+  details.fx{border:1px solid var(--line);border-radius:8px;margin-top:10px;padding:2px 10px 10px}
+  details.fx summary{cursor:pointer;padding:8px 0 2px;font-weight:600;font-size:13px}
+  .fxrow{display:grid;grid-template-columns:20px 1fr 64px 44px;gap:6px;align-items:center;margin-top:8px;font-size:13px}
+  .fxrow input[type=color]{height:28px}
+  .fxrow input[type=number]{padding:4px 6px}
+  .match{font-size:12px;color:var(--muted);margin-top:4px}
+  @media (max-width:900px){.main{grid-template-columns:1fr}.thumbs{display:none}.side{border-left:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Slayt Metin Düzenleyici</h1>
+  <button class="btn" id="btnUpload">Slayt yükle</button>
+  <input type="file" id="file" accept=".png,.jpg,.jpeg,.webp,.pdf" hidden>
+  <button class="btn accent" id="btnAdd" disabled>+ Metin ekle</button>
+  <button class="btn" id="btnCompare" disabled title="Basılı tut: orijinali göster">Orijinal</button>
+  <button class="btn" id="btnBoxes" disabled>Kutuları gizle</button>
+  <span class="sp"></span>
+  <span id="docname" style="color:var(--muted)"></span>
+  <button class="btn" id="btnPng" disabled>PNG indir</button>
+  <button class="btn primary" id="btnPdf" disabled>PDF indir</button>
+</div>
+<div class="main">
+  <div class="thumbs" id="thumbs"></div>
+  <div class="stagewrap" id="stagewrap">
+    <div class="drop" id="drop">
+      <h2>NotebookLM slaytını buraya bırak</h2>
+      <p>PDF, PNG veya JPG. Metinler otomatik bulunur; tıklayıp değiştirirsin.</p>
+    </div>
+    <div class="stage" id="stage" hidden>
+      <img id="img" alt="Slayt">
+      <div class="busy" id="busy">İşleniyor…</div>
+    </div>
+  </div>
+  <div class="side" id="side">
+    <h3>Seçili metin</h3>
+    <div id="editor"><div class="empty">Slayttaki bir yazıya tıkla.</div></div>
+    <h3>Bu sayfadaki metinler</h3>
+    <div class="list" id="list"><div class="empty">Henüz slayt yok.</div></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const S = { doc:null, pages:[], cur:0, boxes:{}, edits:{}, sel:null, adding:false, newId:1, fonts:[], italic:[], timer:null, reqSeq:0 };
+
+fetch('/api/fonts').then(r=>r.json()).then(d=>{S.fonts=d.fonts;S.italic=d.fonts.filter(f=>f.italic).map(f=>f.name);S.presets=d.presets});
+const STYLE=['text','font','weight','italic','color','stroke_w','stroke_color','shadow','shadow_color','shadow_dx','shadow_dy','align','stroke2_w','stroke2_color','glow','glow_color','glow_r','extrude','extrude_color','hollow','box','box_color','box_pad','rotate'];
+
+// ---------- yükleme
+$('#btnUpload').onclick = () => $('#file').click();
+$('#drop').onclick = () => $('#file').click();
+$('#file').onchange = e => e.target.files[0] && upload(e.target.files[0]);
+const sw = $('#stagewrap');
+sw.addEventListener('dragover', e=>{e.preventDefault();$('#drop').classList.add('over')});
+sw.addEventListener('dragleave', ()=>$('#drop').classList.remove('over'));
+sw.addEventListener('drop', e=>{e.preventDefault();$('#drop').classList.remove('over');e.dataTransfer.files[0]&&upload(e.dataTransfer.files[0])});
+
+async function upload(file){
+  busy('Yükleniyor…');
+  const fd = new FormData(); fd.append('file', file);
+  const r = await fetch('/api/upload',{method:'POST',body:fd});
+  if(!r.ok){busy(false);alert((await r.json()).detail||'Yüklenemedi');return}
+  const d = await r.json();
+  Object.assign(S,{doc:d.doc,pages:d.pages,cur:0,boxes:{},edits:{},sel:null});
+  $('#docname').textContent = d.name + (d.pages.length>1?` · ${d.pages.length} sayfa`:'');
+  $('#drop').hidden = true; $('#stage').hidden = false;
+  ['#btnAdd','#btnCompare','#btnBoxes','#btnPng','#btnPdf'].forEach(s=>$(s).disabled=false);
+  thumbs(); openPage(0);
+}
+
+function thumbs(){
+  const t = $('#thumbs'); t.innerHTML='';
+  S.pages.forEach((p,i)=>{
+    const im = document.createElement('img'); im.className='thumb'+(i===S.cur?' active':'');
+    im.src = `/api/${S.doc}/${i}/image`; im.onclick=()=>openPage(i);
+    const n = document.createElement('div'); n.className='n'; n.textContent=i+1;
+    t.append(im,n);
+  });
+}
+
+async function openPage(i){
+  S.cur=i; S.sel=null;
+  document.querySelectorAll('.thumb').forEach((t,k)=>t.classList.toggle('active',k===i));
+  $('#img').src = `/api/${S.doc}/${i}/image`;
+  drawBoxes(); editor(); list();
+  if(!S.boxes[i]){
+    busy('Metinler okunuyor…');
+    const d = await (await fetch(`/api/${S.doc}/${i}/boxes`)).json();
+    S.boxes[i]=d.boxes; busy(false);
+  }
+  if(S.cur!==i) return;
+  drawBoxes(); list();
+  if(Object.keys(S.edits[i]||{}).length) scheduleRender(0);
+}
+
+// ---------- kutular
+function pageEdits(){ return S.edits[S.cur] ||= {}; }
+function allBoxes(){
+  const base = S.boxes[S.cur]||[];
+  const added = Object.values(pageEdits()).filter(e=>e.new).map(e=>({...e, w:e.w||400}));
+  return [...base, ...added];
+}
+function scale(){ const im=$('#img'); return im.clientWidth / (S.pages[S.cur]?.w||1); }
+function drawBoxes(){
+  document.querySelectorAll('.box').forEach(b=>b.remove());
+  const k = scale(), stage=$('#stage'), pe=pageEdits();
+  for(const b of allBoxes()){
+    const el=document.createElement('div'); el.className='box';
+    const pad=4;
+    Object.assign(el.style,{left:(b.x-pad)*k+'px',top:(b.y-pad)*k+'px',width:(b.w+2*pad)*k+'px',height:(b.h+2*pad)*k+'px'});
+    if(pe[b.id] && !b.new) el.classList.add('edited');
+    if(String(S.sel)===String(b.id)) el.classList.add('sel');
+    el.onclick=ev=>{ev.stopPropagation(); if(!S.adding) select(b.id)};
+    stage.append(el);
+  }
+}
+window.addEventListener('resize', drawBoxes);
+$('#img').addEventListener('load', drawBoxes);
+
+function boxById(id){ return allBoxes().find(b=>String(b.id)===String(id)); }
+function current(id){
+  const b=boxById(id), e=pageEdits()[id]||{};
+  const base={}; STYLE.forEach(k=>{ if(b[k]!==undefined) base[k]=b[k] });
+  return {stroke_w:0,stroke_color:'#ffffff',shadow:false,shadow_color:'#000000',shadow_dx:0,shadow_dy:0,align:'left',
+          stroke2_w:0,stroke2_color:'#ffffff',glow:false,glow_color:'#ffd84d',glow_r:0,extrude:0,extrude_color:'#000000',
+          hollow:false,box:false,box_color:'#ffffff',box_pad:0,rotate:0, ...base,size:0,dx:0,dy:0,fit:false,...e};
+}
+function select(id){ S.sel=id; drawBoxes(); editor(); list(); }
+
+// ---------- metin ekleme
+$('#btnAdd').onclick=()=>{S.adding=!S.adding;$('#btnAdd').classList.toggle('on',S.adding);$('#stage').classList.toggle('adding',S.adding)};
+$('#stage').addEventListener('click',ev=>{
+  if(!S.adding) return;
+  const r=$('#img').getBoundingClientRect(), k=scale();
+  const x=Math.round((ev.clientX-r.left)/k), y=Math.round((ev.clientY-r.top)/k);
+  const id='n'+(S.newId++);
+  pageEdits()[id]={id,new:true,x,y,w:400,h:48,size:48,text:'Yeni metin',font:'Inter',weight:600,italic:false,color:'#1d1d1f',align:'left'};
+  S.adding=false;$('#btnAdd').classList.remove('on');$('#stage').classList.remove('adding');
+  select(id); scheduleRender();
+});
+
+// ---------- düzenleyici
+function editor(){
+  const box=$('#editor');
+  if(S.sel==null || !boxById(S.sel)){box.innerHTML='<div class="empty">Slayttaki bir yazıya tıkla.</div>';return}
+  const c=current(S.sel), b=boxById(S.sel);
+  const groups=[...new Set(S.fonts.map(f=>f.group))];
+  const fontOpts=groups.map(g=>`<optgroup label="${g}">`+S.fonts.filter(f=>f.group===g).map(f=>`<option ${f.name===c.font?'selected':''}>${f.name}</option>`).join('')+'</optgroup>').join('');
+  const fx=(on,label,body)=>`<div class="fxrow"><input type="checkbox" ${on?'checked':''} data-fx="${label}"><span>${label}</span>${body}</div>`;
+  const presetHtml=(S.presets||[]).map(p=>`<button data-p="${p.key}" title="${p.label}"><img src="/api/preset/${p.key}.png?color=${c.color.slice(1)}" alt=""><span>${p.label}</span></button>`).join('');
+  const w=[300,400,500,600,700,800,900].map(v=>`<option value="${v}" ${+c.weight===v?'selected':''}>${({300:'İnce',400:'Normal',500:'Orta',600:'Yarı kalın',700:'Kalın',800:'Ekstra kalın',900:'Siyah'})[v]}</option>`).join('');
+  box.innerHTML=`
+    <textarea id="eText" spellcheck="false"></textarea>
+    ${b.new?'':`<div class="hint">Orijinal: “${esc(b.text)}”</div>`}
+    <div class="row"><label>Font</label><select id="eFont">${fontOpts}</select></div>
+    ${b.new||!b.font_score?'':`<div class="match">Algılanan en yakın font: ${esc(b.font)} · ${Math.round(b.font_score*100)}% benzer${b.stroke_w?' · kontur':''}${b.shadow?' · gölge':''}</div>`}
+    <div class="row"><label>Kalınlık</label><select id="eWeight">${w}</select></div>
+    <div class="row"><label>Stil</label>
+      <div class="seg"><button id="eReg" class="${c.italic?'':'on'}">Düz</button><button id="eIta" class="${c.italic?'on':''}" ${S.italic.includes(c.font)?'':'disabled title="Bu fontun italiği yok"'}>İtalik</button></div></div>
+    <div class="row"><label>Renk</label><input type="color" id="eColor" value="${c.color}"></div>
+    <div class="row"><label>Boyut</label><input type="number" id="eSize" min="0" placeholder="otomatik" value="${c.size||''}"></div>
+    <div class="row"><label>Hizalama</label>
+      <div class="seg" id="eAlign">${['left','center','right'].map(a=>`<button data-a="${a}" class="${c.align===a?'on':''}">${({left:'Sol',center:'Orta',right:'Sağ'})[a]}</button>`).join('')}</div></div>
+    <div class="row"><label>Konum</label>
+      <div class="nudge"><button class="btn" data-d="-1,0">←</button><button class="btn" data-d="1,0">→</button><button class="btn" data-d="0,-1">↑</button><button class="btn" data-d="0,1">↓</button></div></div>
+    <div class="row"><label></label><label style="flex:1;color:var(--ink);font-size:13px"><input type="checkbox" id="eFit" ${c.fit?'checked':''}> Taşarsa kutuya sığdır</label></div>
+    <h3 style="margin-top:16px">Hazır stiller</h3>
+    <div class="presets" id="ePresets">${presetHtml}</div>
+    <details class="fx" ${S.fxOpen?'open':''}><summary>Efektler</summary>
+      ${fx(c.stroke_w>0,'Kontur',`<input type="color" data-k="stroke_color" value="${c.stroke_color}"><input type="number" data-k="stroke_w" min="0" value="${c.stroke_w}">`)}
+      ${fx(c.stroke2_w>0,'Dış kontur',`<input type="color" data-k="stroke2_color" value="${c.stroke2_color}"><input type="number" data-k="stroke2_w" min="0" value="${c.stroke2_w}">`)}
+      ${fx(c.shadow,'Gölge',`<input type="color" data-k="shadow_color" value="${c.shadow_color}"><span style="display:flex;gap:3px"><input type="number" data-k="shadow_dx" value="${c.shadow_dx}" title="yatay"><input type="number" data-k="shadow_dy" value="${c.shadow_dy}" title="dikey"></span>`)}
+      ${fx(c.glow,'Neon',`<input type="color" data-k="glow_color" value="${c.glow_color}"><input type="number" data-k="glow_r" min="0" value="${c.glow_r}" title="yarıçap (0=otomatik)">`)}
+      ${fx(c.extrude>0,'3B kabartma',`<input type="color" data-k="extrude_color" value="${c.extrude_color}"><input type="number" data-k="extrude" min="0" value="${c.extrude}">`)}
+      ${fx(c.box,'Etiket',`<input type="color" data-k="box_color" value="${c.box_color}"><input type="number" data-k="box_pad" min="0" value="${c.box_pad}" title="iç boşluk (0=otomatik)">`)}
+      ${fx(c.hollow,'İçi boş','<span></span><span></span>')}
+      <div class="fxrow"><span></span><span>Döndür (°)</span><span></span><input type="number" data-k="rotate" step="1" value="${c.rotate}"></div>
+    </details>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="eDel">${b.new?'Kutuyu kaldır':'Yazıyı sil'}</button>
+      <button class="btn" id="eReset" ${pageEdits()[S.sel]&&!b.new?'':'disabled'}>Geri al</button>
+    </div>`;
+  $('#eText').value=c.text;
+  $('#eText').oninput=e=>set({text:e.target.value});
+  $('#eFont').onchange=e=>{const f=e.target.value; set({font:f, italic: c.italic && S.italic.includes(f)}); editor()};
+  $('#eWeight').onchange=e=>set({weight:+e.target.value});
+  $('#eReg').onclick=()=>{set({italic:false});editor()};
+  $('#eIta').onclick=()=>{set({italic:true});editor()};
+  $('#eColor').oninput=e=>set({color:e.target.value});
+  $('#eSize').oninput=e=>set({size:+e.target.value||0});
+  $('#eFit').onchange=e=>set({fit:e.target.checked});
+  box.querySelectorAll('#eAlign button').forEach(bt=>bt.onclick=()=>{set({align:bt.dataset.a});editor()});
+  box.querySelectorAll('.nudge button').forEach(bt=>bt.onclick=()=>{
+    const [dx,dy]=bt.dataset.d.split(',').map(Number), cc=current(S.sel), st=(cc.size||b.h)/10|0||2;
+    if(b.new) set({x:cc.x+dx*st,y:cc.y+dy*st}); else set({dx:cc.dx+dx*st,dy:cc.dy+dy*st});
+  });
+  box.querySelector('details.fx').ontoggle=e=>S.fxOpen=e.target.open;
+  box.querySelectorAll('[data-k]').forEach(inp=>inp.oninput=()=>{
+    const k=inp.dataset.k, v=inp.type==='number'?(+inp.value||0):inp.value; const p={[k]:v};
+    if(k==='shadow_dx'||k==='shadow_dy'||k==='shadow_color') p.shadow=true;
+    if(k==='glow_color'||k==='glow_r') p.glow=true;
+    if(k==='box_color'||k==='box_pad') p.box=true;
+    set(p);
+  });
+  const fxDefaults={'Kontur':on=>({stroke_w:on?Math.max(2,(b.h/12)|0):0}),'Dış kontur':on=>({stroke2_w:on?Math.max(3,(b.h/7)|0):0}),
+    'Gölge':on=>({shadow:on,shadow_dx:c.shadow_dx||Math.max(2,(b.h/18)|0),shadow_dy:c.shadow_dy||Math.max(2,(b.h/12)|0)}),
+    'Neon':on=>({glow:on,glow_color:c.glow_color==='#ffd84d'?c.color:c.glow_color}),'3B kabartma':on=>({extrude:on?Math.max(3,(b.h/8)|0):0}),
+    'Etiket':on=>({box:on}),'İçi boş':on=>({hollow:on,stroke_w:on&&!c.stroke_w?Math.max(2,(b.h/16)|0):c.stroke_w})};
+  box.querySelectorAll('[data-fx]').forEach(cb=>cb.onchange=()=>{set(fxDefaults[cb.dataset.fx](cb.checked));editor()});
+  box.querySelectorAll('#ePresets button').forEach(bt=>bt.onclick=async()=>{
+    const r=await fetch(`/api/${S.doc}/${S.cur}/preset`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:bt.dataset.p,edit:{...current(S.sel),id:S.sel}})});
+    if(!r.ok) return; const d=await r.json(); pageEdits()[S.sel]=d.edit; editor(); list(); drawBoxes(); scheduleRender(0);
+  });
+  $('#eDel').onclick=()=>{ if(b.new){delete pageEdits()[S.sel];S.sel=null;drawBoxes();editor();list();scheduleRender()} else {set({text:''});editor()} };
+  $('#eReset').onclick=()=>{delete pageEdits()[S.sel];editor();list();drawBoxes();scheduleRender()};
+}
+function set(patch){
+  const id=S.sel, pe=pageEdits();
+  pe[id]={...current(id),...patch,id};
+  if(!pe[id].new && typeof pe[id].id==='string' && /^\d+$/.test(pe[id].id)) pe[id].id=+pe[id].id;
+  list(); drawBoxes(); scheduleRender();
+}
+
+function list(){
+  const L=$('#list'), pe=pageEdits(), bs=allBoxes();
+  if(!S.doc){return}
+  if(!S.boxes[S.cur]){L.innerHTML='<div class="empty">Metinler okunuyor…</div>';return}
+  if(!bs.length){L.innerHTML='<div class="empty">Bu sayfada metin bulunamadı.</div>';return}
+  L.innerHTML='';
+  for(const b of bs){
+    const e=pe[b.id], it=document.createElement('div');
+    it.className='it'+(e?' edited':'')+(String(S.sel)===String(b.id)?' sel':'');
+    const txt=e?(e.text===''?'(silindi)':e.text):b.text;
+    it.innerHTML=`<span class="dot"></span><span class="t">${esc(txt)}</span>`;
+    it.onclick=()=>select(b.id);
+    L.append(it);
+  }
+}
+
+// ---------- render
+function editsArray(page){ return Object.values(S.edits[page]||{}).map(e=>({...e})); }
+function scheduleRender(delay=350){ clearTimeout(S.timer); S.timer=setTimeout(renderNow,delay); }
+async function renderNow(){
+  const page=S.cur, seq=++S.reqSeq, edits=editsArray(page);
+  if(!edits.length){ $('#img').src=`/api/${S.doc}/${page}/image`; return; }
+  busy('İşleniyor…');
+  const r=await fetch(`/api/${S.doc}/${page}/render`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({edits})});
+  if(seq!==S.reqSeq||page!==S.cur) return;
+  busy(false);
+  if(!r.ok){alert('Oluşturulamadı');return}
+  const url=URL.createObjectURL(await r.blob());
+  const old=$('#img').src; $('#img').src=url; S.lastRender=url;
+  if(old.startsWith('blob:')) setTimeout(()=>URL.revokeObjectURL(old),2000);
+}
+
+// ---------- karşılaştır / kutular / indir
+const cmp=$('#btnCompare');
+const showOrig=()=>{ if(!S.doc) return; S.hold=$('#img').src; $('#img').src=`/api/${S.doc}/${S.cur}/image` };
+const hideOrig=()=>{ if(S.hold){ $('#img').src=S.hold; S.hold=null } };
+cmp.addEventListener('mousedown',showOrig); cmp.addEventListener('mouseup',hideOrig); cmp.addEventListener('mouseleave',hideOrig);
+cmp.addEventListener('touchstart',showOrig); cmp.addEventListener('touchend',hideOrig);
+$('#btnBoxes').onclick=()=>{const h=$('#stage').classList.toggle('hideboxes');$('#btnBoxes').textContent=h?'Kutuları göster':'Kutuları gizle'};
+$('#btnPdf').onclick=()=>download('pdf');
+$('#btnPng').onclick=()=>download('png');
+async function download(fmt){
+  busy('Hazırlanıyor…');
+  const edits={}; for(const k in S.edits){ const a=editsArray(+k); if(a.length) edits[k]=a; }
+  const r=await fetch(`/api/${S.doc}/export`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({format:fmt,edits})});
+  busy(false);
+  const blob=await r.blob(), cd=r.headers.get('Content-Disposition')||'', m=cd.match(/filename="([^"]+)"/);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=m?m[1]:'slayt.'+fmt; a.click();
+}
+
+function busy(t){ const b=$('#busy'); if(!t){b.style.display='none';return} b.textContent=t; b.style.display='block'; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]); }
+</script>
+</body>
+</html>

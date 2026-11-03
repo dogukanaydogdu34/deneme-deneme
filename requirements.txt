@@ -1,0 +1,9 @@
+easyocr>=1.7
+torch>=2.2
+opencv-python-headless>=4.9
+pillow>=10.0
+numpy>=1.26
+pymupdf>=1.24
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
